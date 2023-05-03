@@ -33,15 +33,20 @@
     "dao-attack-2": "npx hardhat test test/dao-attack-2/tests.js",
     "dao-attack-3": "npx hardhat test test/dao-attack-3/tests.js",
     "oracle-manipulation-1": "npx hardhat test test/oracle-manipulation-1/tests.js",
-    "oracle-manipulation-2": "npx hardhat test test/oracle-manipulation-2/tests.js"
+    "oracle-manipulation-2": "npx hardhat test test/oracle-manipulation-2/tests.js",
+    "call-attacks-1": "npx hardhat test test/call-attacks-1/tests.js",
+    "call-attacks-2": "npx hardhat test test/call-attacks-2/tests.js",
+    "call-attacks-3": "npx hardhat test test/call-attacks-3/tests.js",
+    "call-attacks-4": "npx hardhat test test/call-attacks-4/tests.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "hardhat": "^2.13.0"
   },
   "dependencies": {
-    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "@openzeppelin/contracts": "^4.8.2",
+    "@openzeppelin/contracts-upgradeable": "^4.8.3",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "dotenv": "^16.0.3"
   }
 }
