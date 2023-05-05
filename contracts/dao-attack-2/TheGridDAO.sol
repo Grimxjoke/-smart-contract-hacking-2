@@ -14,7 +14,6 @@ interface ITheGridTreasury {
  * @author JohnnyTime (https://smartcontractshacking.com)
  */
 contract TheGridDAO is ERC20, Ownable {
-
     struct Proposal {
         uint256 proposedAt;
         address proposer;
@@ -26,10 +25,10 @@ contract TheGridDAO is ERC20, Ownable {
     }
 
     mapping(uint => Proposal) public getProposal;
-    mapping(uint => mapping (address => bool)) internal alreadyVoted; 
-    
+    mapping(uint => mapping(address => bool)) internal alreadyVoted;
+
     uint256 private immutable VOTING_PERIOD = 1 days;
-    
+
     uint256 public lastProposalId;
     ITheGridTreasury public treasury;
 
@@ -45,10 +44,14 @@ contract TheGridDAO is ERC20, Ownable {
         _mint(_to, _amount);
     }
 
-    function propose(address _receiver, uint256 _amount) external returns (uint256) {
-        
+    function propose(
+        address _receiver,
+        uint256 _amount
+    ) external returns (uint256) {
         uint256 proposerBalance = balanceOf(msg.sender);
         require(proposerBalance > 0, "You don't have voting power");
+
+        //@audit Doens't verify _reciver != address(0)
 
         uint256 proposalId = lastProposalId;
 
@@ -60,7 +63,7 @@ contract TheGridDAO is ERC20, Ownable {
         proposal.yes = proposerBalance;
         proposal.no = 0;
         proposal.processed = false;
-        
+
         alreadyVoted[proposalId][msg.sender] = true;
 
         lastProposalId++;
@@ -69,41 +72,44 @@ contract TheGridDAO is ERC20, Ownable {
     }
 
     function vote(uint _proposalId, bool _decision) external {
-        
-        require(!alreadyVoted[_proposalId][msg.sender], "Already voted on this proposal");
+        require(
+            !alreadyVoted[_proposalId][msg.sender],
+            "Already voted on this proposal"
+        );
 
         uint256 voterBalance = balanceOf(msg.sender);
         require(voterBalance > 0, "You don't have voting power");
-        
+
         Proposal storage proposal = getProposal[_proposalId];
 
         // Some checks
         require(proposal.proposer != address(0), "Doesn't exist");
         require(!proposal.processed, "Already processed");
-        
+
         // Add votes
-        if(_decision){
-            proposal.yes += voterBalance; 
+        if (_decision) {
+            proposal.yes += voterBalance;
         } else {
-            proposal.no += voterBalance; 
+            proposal.no += voterBalance;
         }
-        
+
         // Update voted
         alreadyVoted[_proposalId][msg.sender] = true;
     }
 
     function execute(uint _id) external {
-
         Proposal storage proposal = getProposal[_id];
         require(proposal.proposer != address(0), "Doesn't exist");
-        require(block.timestamp >= proposal.proposedAt + VOTING_PERIOD, "Voting is not over");
-        require(!proposal.processed, "Proposl already processed");
+        require(
+            block.timestamp >= proposal.proposedAt + VOTING_PERIOD,
+            "Voting is not over"
+        );
+        require(!proposal.processed, "Proposal already processed");
 
-        if(proposal.yes > proposal.no) {
+        if (proposal.yes > proposal.no) {
             treasury.sendPayment(proposal.to, proposal.amount);
         }
 
         proposal.processed = true;
     }
 }
-
