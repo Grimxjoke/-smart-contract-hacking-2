@@ -11,9 +11,10 @@ describe('DAO Attack Exercise 3', function () {
     const MEMBER_2_TOKENS = ethers.utils.parseEther('1000000'); // 1M Tokens
     const TOKENS_IN_POOL = ethers.utils.parseEther('2000000'); // 2M tokens
 
+
     // Treasury ETH
     const ETH_IN_TREASURY = ethers.utils.parseEther('1500'); // 1500 ETH
-    
+
     before(async function () {
         /** SETUP EXERCISE - DON'T CHANGE ANYTHING HERE */
 
@@ -45,7 +46,7 @@ describe('DAO Attack Exercise 3', function () {
         this.treasury = await TreasuryFactory.deploy();
         this.governance = await GovernanceFactory.deploy(this.token.address, this.treasury.address);
         await this.treasury.setGovernance(this.governance.address);
-        
+
         // Send ETH to Treasury
         await deployer.sendTransaction({
             to: this.treasury.address,
@@ -54,7 +55,7 @@ describe('DAO Attack Exercise 3', function () {
         expect(
             await ethers.provider.getBalance(this.treasury.address)
         ).to.be.equal(ETH_IN_TREASURY);
-        
+
         // Mint tokens
         await this.token.mint(deployer.address, DEPLOYER_TOKENS);
         await this.token.mint(member1.address, MEMBER_1_TOKENS);
@@ -64,7 +65,23 @@ describe('DAO Attack Exercise 3', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR SOLUTION HERE */
-        
+
+        const HackerFactory = await ethers.getContractFactory(
+            'contracts/dao-attack-3/Hacker.sol:Hacker',
+            attacker
+        );
+
+        // Deploy and Setup Contracts
+        this.hacker = await HackerFactory.deploy(
+            this.token.address,
+            this.pool.address,
+            this.governance.address,
+            this.treasury.address
+        );
+
+        await this.hacker.attack();
+
+
     });
 
     after(async function () {

@@ -150,14 +150,6 @@ describe('DAO Attack Exercise 2', function () {
             if (i > 0) await this.dao.connect(signer).vote(this.proposalId, true);
             tokenOwner = signer;
         }
-
-
-
-
-
-        // await ethers.provider.send("evm_increaseTime", [1 * 24 * 60 * 60]); // 1 day
-
-
     });
 
     after(async function () {
