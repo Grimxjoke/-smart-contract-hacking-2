@@ -191,7 +191,7 @@ describe('Oracle Manipulation Exercise 2', function () {
 
 
 
-        let weth_Back = await ethers.utils.parseEther('4692');
+        let weth_Back = ethers.utils.parseEther('4692');
         await this.weth
             .connect(impersonatedSigner)
             .transfer(

