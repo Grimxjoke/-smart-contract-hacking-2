@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "./IBlockSafe.sol";
+import "hardhat/console.sol";
 
 library CallHelpers {
     function getRevertMsg(
@@ -30,8 +31,8 @@ contract BlockSafe is
 {
     using CallHelpers for bytes;
 
-    uint8 constant public CALL_OPERATION = 1;
-    uint8 constant public DELEGATECALL_OPERATION = 2;
+    uint8 public constant CALL_OPERATION = 1;
+    uint8 public constant DELEGATECALL_OPERATION = 2;
 
     event Executed(
         address caller,
@@ -57,9 +58,8 @@ contract BlockSafe is
     }
 
     function initialize(address[] calldata _operators) external {
-
         require(!initialized, "Can not be initialized twice");
-        
+
         initialized = true;
 
         require(
@@ -77,8 +77,7 @@ contract BlockSafe is
         address _destAddress,
         bytes calldata _encodedCalldata,
         uint8 operation
-    ) 
-        external isInitialized onlyOperator(msg.sender) returns (bytes memory) {
+    ) external isInitialized onlyOperator(msg.sender) returns (bytes memory) {
         return _execute(_destAddress, _encodedCalldata, 0, operation);
     }
 
@@ -87,7 +86,11 @@ contract BlockSafe is
         bytes calldata _encodedCalldata,
         uint256 _value
     )
-        external payable isInitialized onlyOperator(msg.sender) returns (bytes memory)
+        external
+        payable
+        isInitialized
+        onlyOperator(msg.sender)
+        returns (bytes memory)
     {
         return _execute(_destAddress, _encodedCalldata, _value, CALL_OPERATION);
     }
@@ -98,15 +101,15 @@ contract BlockSafe is
         uint256 _value,
         uint8 operation
     ) private nonReentrant returns (bytes memory) {
-
         bool success;
         bytes memory result;
 
-        if(operation == CALL_OPERATION) {
+        if (operation == CALL_OPERATION) {
             (success, result) = _destAddress.call{value: _value}(
                 _encodedCalldata
             );
         } else if (operation == DELEGATECALL_OPERATION) {
+            // console.log("Ready for destroy");
             (success, result) = _destAddress.delegatecall(_encodedCalldata);
         } else {
             revert("Wrong operation");
@@ -132,21 +135,20 @@ contract BlockSafe is
         emit NewOperator(_address);
     }
 
-    function removeOperator(address _address) external onlyOperator(msg.sender) {
+    function removeOperator(
+        address _address
+    ) external onlyOperator(msg.sender) {
         operators[_address] = false;
         emit OperatorRemoved(_address);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(ERC165, ERC1155Receiver)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC165, ERC1155Receiver) returns (bool) {
         return
             interfaceId == type(IBlockSafe).interfaceId ||
             super.supportsInterface(interfaceId);
     }
+
     receive() external payable {}
 }
