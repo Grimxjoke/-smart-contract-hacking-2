@@ -30,8 +30,10 @@ contract CryptoKeeper is
 {
     using CallHelpers for bytes;
 
-    uint8 constant public CALL_OPERATION = 1;
-    uint8 constant public DELEGATECALL_OPERATION = 2;
+    //Uint256 _status --> Reantrancy Guard --> Slot 0
+
+    uint8 public constant CALL_OPERATION = 1;
+    uint8 public constant DELEGATECALL_OPERATION = 2;
 
     event Executed(
         address caller,
@@ -43,7 +45,7 @@ contract CryptoKeeper is
     event NewOperator(address operator);
     event OperatorRemoved(address operator);
 
-    bool public initialized = false;
+    bool public initialized = false; // Slot 1
     mapping(address => bool) public operators;
 
     modifier isInitialized() {
@@ -57,7 +59,6 @@ contract CryptoKeeper is
     }
 
     function initialize(address[] calldata _operators) external {
-        
         initialized = true;
 
         require(
@@ -75,8 +76,8 @@ contract CryptoKeeper is
         address _destAddress,
         bytes calldata _encodedCalldata,
         uint8 operation
-    ) 
-        external isInitialized onlyOperator(msg.sender) returns (bytes memory) {
+    ) external isInitialized onlyOperator(msg.sender) returns (bytes memory) {
+        //@audit let the user decide the Operation Number
         return _execute(_destAddress, _encodedCalldata, 0, operation);
     }
 
@@ -85,8 +86,15 @@ contract CryptoKeeper is
         bytes calldata _encodedCalldata,
         uint256 _value
     )
-        external payable isInitialized onlyOperator(msg.sender) returns (bytes memory)
+        external
+        payable
+        isInitialized
+        onlyOperator(msg.sender)
+        returns (bytes memory)
     {
+        //@audit Why payable since we use the _value input.
+        // Wallet should already have money
+
         return _execute(_destAddress, _encodedCalldata, _value, CALL_OPERATION);
     }
 
@@ -96,11 +104,10 @@ contract CryptoKeeper is
         uint256 _value,
         uint8 operation
     ) private nonReentrant returns (bytes memory) {
-
         bool success;
         bytes memory result;
 
-        if(operation == CALL_OPERATION) {
+        if (operation == CALL_OPERATION) {
             (success, result) = _destAddress.call{value: _value}(
                 _encodedCalldata
             );
@@ -130,22 +137,21 @@ contract CryptoKeeper is
         emit NewOperator(_address);
     }
 
-    function removeOperator(address _address) external onlyOperator(msg.sender) {
+    function removeOperator(
+        //@audit Any Operator can remove any other Operator as he wish
+        address _address
+    ) external onlyOperator(msg.sender) {
         operators[_address] = false;
         emit OperatorRemoved(_address);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(ERC165, ERC1155Receiver)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC165, ERC1155Receiver) returns (bool) {
         return
             interfaceId == type(ICryptoKeeper).interfaceId ||
             super.supportsInterface(interfaceId);
     }
-    
+
     receive() external payable {}
 }
